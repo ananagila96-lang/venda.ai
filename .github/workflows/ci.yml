@@ -15,3 +15,12 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm audit --audit-level=high
+      - name: Install browser QA
+        run: |
+          npm install --no-save @playwright/test
+          npx playwright install --with-deps chromium
+      - name: Run functional browser QA
+        run: |
+          npm run dev -- --host 127.0.0.1 &
+          npx wait-on http://127.0.0.1:5173
+          npx playwright test tests/core.spec.js --project=chromium
