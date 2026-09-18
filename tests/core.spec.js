@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('core commercial flows persist in browser', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('http://127.0.0.1:5173/');
   await expect(page.getByText('VENDA.AI · V1.7.8 QA FUNCIONAL')).toBeVisible();
 
   await page.getByRole('button', { name: /Clientes/ }).first().click();
