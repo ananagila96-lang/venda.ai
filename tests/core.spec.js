@@ -16,6 +16,11 @@ test('core commercial flows persist in browser', async ({ page }) => {
   await page.reload();
   await page.getByRole('button', { name: /Clientes/ }).first().click();
   await expect(page.getByText('Cliente QA')).toBeVisible();
+  await page.getByRole('button', { name: /Conversar/ }).last().click();
+  await expect(page.getByText('Cliente QA')).toBeVisible();
+  await page.getByPlaceholder('Responder...').fill('Histórico Cliente QA');
+  await page.getByRole('button', { name: /Registrar mensagem/i }).click();
+  await expect(page.getByText('Histórico Cliente QA')).toBeVisible();
 
   await page.getByRole('button', { name: /Conversas/ }).first().click();
   await page.getByRole('button', { name: /Bianca Souza/ }).click();
