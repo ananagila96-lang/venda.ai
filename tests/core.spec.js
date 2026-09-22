@@ -1,8 +1,20 @@
 import { test, expect } from '@playwright/test';
 
-test('public landing opens client area', async ({ page }) => {
+test('public landing sells recovery and opens client area', async ({ page }) => {
   await page.goto('http://127.0.0.1:5173/');
-  await expect(page.locator('.lp-hero h1')).toContainText('O Venda.AI encontra oportunidades');
+  await expect(page.locator('.lp-hero h1')).toContainText('Venda que esfria');
+  await expect(page.getByText('SECRETÁRIA VIRTUAL').first()).toBeVisible();
+  await expect(page.getByText('COMO FUNCIONA A INTEGRAÇÃO')).toBeVisible();
+
+  const hireButtons = page.getByRole('link', { name: /Contratar agora/i });
+  await expect(hireButtons.first()).toBeVisible();
+  expect(await hireButtons.count()).toBeGreaterThan(4);
+
+  await page.getByRole('link', { name: /Tirar dúvidas/i }).click();
+  await expect(page.locator('#contratar')).toBeVisible();
+  await page.getByRole('button', { name: 'Como recupera vendas?' }).click();
+  await expect(page.locator('.lp-agent-answer')).toContainText('oportunidades');
+
   await expect(page.locator('.lp-client')).toBeVisible();
   await page.locator('.lp-client').click();
   await expect(page).toHaveURL(/#\/app$/);
