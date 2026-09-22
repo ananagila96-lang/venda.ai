@@ -62,7 +62,13 @@ AGENDAMENTO ≠ CONFIRMAÇÃO ≠ COMPARECIMENTO ≠ VENDA ≠ RECEITA VALIDADA.
 Agenda, confirmação, cancelamento, reagendamento, comparecimento e lista de espera são decisões preservadas. Ao surgir vaga, o sistema poderá identificar pessoas compatíveis da lista, oferecer horário e registrar recuperação. Durante P0, preservar sem expansão desnecessária.
 
 ## 7. Multiempresa
-Dados de empresas diferentes nunca podem se misturar. Arquitetura deve considerar centenas e referência de ~1.000 clientes/empresas. localStorage/browser pode servir a demo, mas NÃO é segurança multi-tenant de produção. Produção requer autenticação, autorização, tenant/empresa, isolamento server-side, persistência e controle de acesso.
+Dados de empresas diferentes nunca podem se misturar.
+
+**Premissa de capacidade vigente:** a infraestrutura deve ser projetada para suportar em média **200 clientes/empresas ativos nos próximos 3 meses**, sem exigir refatoração estrutural para atingir esse patamar. A arquitetura continua devendo permitir evolução posterior para centenas adicionais e referência de ~1.000 clientes/empresas.
+
+Isso exige desde já decisões compatíveis com crescimento: autenticação, autorização, tenant/empresa, isolamento server-side, persistência confiável, observabilidade, controle de acesso, tratamento de concorrência e componentes que possam escalar horizontalmente quando necessário.
+
+localStorage/browser pode servir a demo, mas NÃO é segurança multi-tenant de produção.
 
 ## 8. Fonte da verdade técnica
 Repositório oficial: **ananagila96-lang/venda.ai**
