@@ -1,10 +1,16 @@
 import { test, expect } from '@playwright/test';
 
-test('core commercial flows persist in browser', async ({ page }) => {
+test('public landing opens client area', async ({ page }) => {
   await page.goto('http://127.0.0.1:5173/');
-  await expect(page.getByRole('heading', { name: /O Venda\.AI encontra oportunidades/i })).toBeVisible();
-  await page.getByRole('button', { name: /Área do Cliente/i }).first().click();
+  await expect(page.locator('.lp-hero h1')).toContainText('O Venda.AI encontra oportunidades');
+  await expect(page.locator('.lp-client')).toBeVisible();
+  await page.locator('.lp-client').click();
   await expect(page).toHaveURL(/#\/app$/);
+  await expect(page.locator('.app')).toBeVisible();
+});
+
+test('core commercial flows persist in browser', async ({ page }) => {
+  await page.goto('http://127.0.0.1:5173/#/app');
   await expect(page.getByText('VENDA.AI · V1.7.8 QA FUNCIONAL')).toBeVisible();
 
   await page.getByRole('button', { name: /Clientes/ }).first().click();
