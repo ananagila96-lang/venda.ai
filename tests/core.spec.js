@@ -17,7 +17,7 @@ test('core commercial flows persist in browser', async ({ page }) => {
   await page.getByRole('button', { name: /Novo cliente/i }).click();
   await page.getByLabel('Nome do cliente').fill('Cliente QA');
   await page.getByLabel('Telefone do cliente').fill('(61) 99999-0000');
-  await page.getByLabel('Serviço de interesse / último serviço').selectOption({ label: /Botox Capilar/ });
+  await page.getByLabel('Serviço de interesse / último serviço').selectOption('Botox Capilar');
   await page.getByRole('button', { name: /Salvar cliente/i }).click();
   await expect(page.getByText('Cliente QA')).toBeVisible();
 
