@@ -18,6 +18,8 @@ jobs:
         run: node --test tests/zapi-adapter.test.mjs
       - name: Run Z-API webhook tests
         run: node --test tests/zapi-webhook.test.mjs
+      - name: Run P0 AI and conversation pipeline tests
+        run: npm run test:p0
       - run: npm audit --audit-level=high
       - name: Install browser QA
         run: |
