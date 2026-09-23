@@ -12,7 +12,7 @@ Este diretório contém integração **server-side**. Não importar este adapter
 - endpoint HTTP `POST /webhooks/zapi` em `server/index.js`;
 - normalização básica de mensagens inbound;
 - vínculo server-side `instance -> tenant` via `ZAPI_INSTANCE_TENANT_MAP`;
-- proteção opcional do webhook por `ZAPI_WEBHOOK_SECRET`;
+- proteção do webhook por segredo configurado no backend;
 - healthcheck `GET /health`;
 - testes automatizados do outbound e webhook;
 - nenhum segredo versionado.
@@ -25,11 +25,11 @@ Este diretório contém integração **server-side**. Não importar este adapter
 - `ZAPI_INSTANCE_TENANT_MAP` com o vínculo real da instância ao tenant.
 
 ## URL do webhook
-Depois de publicar o backend em HTTPS, cadastrar no campo **Ao receber** da Z-API:
+Depois de publicar o backend em HTTPS, cadastrar no campo **Ao receber** da Z-API uma URL do backend apontando para:
 
-`https://<BACKEND_PUBLICO>/webhooks/zapi?secret=<SEGREDO_CONFIGURADO>`
+`/webhooks/zapi`
 
-O segredo real deve ser configurado no secret management do host e nunca commitado.
+A forma exata de transporte do segredo deve ser definida conforme o recurso suportado pelo provedor/host no momento do deploy. O segredo real deve permanecer no secret management e nunca ser commitado.
 
 ## Ainda pendente para E2E P0
 - hospedar o backend em uma URL HTTPS pública;
