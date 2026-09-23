@@ -6,29 +6,30 @@ const source = await readFile(new URL('../server/integrations/zapi/client.js', i
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(source).toString('base64')}`;
 const { getZapiConfig, sendZapiText } = await import(moduleUrl);
 
-test('getZapiConfig uses Omni defaults without exposing secrets', () => {
+test('getZapiConfig defaults to Classic without exposing secrets', () => {
   const config = getZapiConfig({});
-  assert.equal(config.mode, 'omni');
-  assert.equal(config.baseUrl, 'https://api.omni.z-api.io/v1');
-  assert.equal(config.secretKey, undefined);
-  assert.equal(config.channelId, undefined);
+  assert.equal(config.mode, 'classic');
+  assert.equal(config.classicBaseUrl, 'https://api.z-api.io');
+  assert.equal(config.instanceId, undefined);
+  assert.equal(config.token, undefined);
+  assert.equal(config.clientToken, undefined);
 });
 
-test('sendZapiText fails fast when credentials are absent', async () => {
+test('sendZapiText Classic fails fast when credentials are absent', async () => {
   await assert.rejects(
     () => sendZapiText({ to: '5511999999999', text: 'oi', env: {}, fetchImpl: async () => { throw new Error('fetch should not run'); } }),
-    /ZAPI_OMNI_CHANNEL_ID/
+    /ZAPI_INSTANCE_ID/
   );
 });
 
-test('sendZapiText sends the documented Omni payload', async () => {
+test('sendZapiText Classic sends the documented request', async () => {
   let request;
   const fetchImpl = async (url, options) => {
     request = { url, options };
     return {
       ok: true,
       status: 200,
-      text: async () => JSON.stringify({ messageId: 'msg-1' })
+      text: async () => JSON.stringify({ zaapId: 'msg-1' })
     };
   };
 
@@ -37,24 +38,44 @@ test('sendZapiText sends the documented Omni payload', async () => {
     text: 'Olá',
     fetchImpl,
     env: {
+      ZAPI_MODE: 'classic',
+      ZAPI_CLASSIC_BASE_URL: 'https://api.z-api.io',
+      ZAPI_INSTANCE_ID: 'instance-123',
+      ZAPI_TOKEN: 'test-token',
+      ZAPI_CLIENT_TOKEN: 'test-client-token'
+    }
+  });
+
+  assert.equal(request.url, 'https://api.z-api.io/instances/instance-123/token/test-token/send-text');
+  assert.equal(request.options.method, 'POST');
+  assert.equal(request.options.headers['Client-Token'], 'test-client-token');
+  assert.deepEqual(JSON.parse(request.options.body), {
+    phone: '5511999999999',
+    message: 'Olá'
+  });
+  assert.deepEqual(result, { zaapId: 'msg-1' });
+});
+
+test('sendZapiText still supports Omni explicitly', async () => {
+  let request;
+  const fetchImpl = async (url, options) => {
+    request = { url, options };
+    return { ok: true, status: 200, text: async () => '{}' };
+  };
+
+  await sendZapiText({
+    to: '5511999999999',
+    text: 'Olá',
+    fetchImpl,
+    env: {
       ZAPI_MODE: 'omni',
-      ZAPI_OMNI_BASE_URL: 'https://api.omni.z-api.io/v1',
       ZAPI_OMNI_SECRET_KEY: 'test-secret',
       ZAPI_OMNI_CHANNEL_ID: 'channel-123'
     }
   });
 
   assert.equal(request.url, 'https://api.omni.z-api.io/v1/channels/channel-123/messages');
-  assert.equal(request.options.method, 'POST');
   assert.equal(request.options.headers.Authorization, 'Bearer test-secret');
-  assert.deepEqual(JSON.parse(request.options.body), {
-    recipient: { identifier: '5511999999999' },
-    content: {
-      type: 'TEXT',
-      body: { message: 'Olá' }
-    }
-  });
-  assert.deepEqual(result, { messageId: 'msg-1' });
 });
 
 test('sendZapiText surfaces non-2xx provider responses', async () => {
@@ -63,9 +84,10 @@ test('sendZapiText surfaces non-2xx provider responses', async () => {
       to: '5511999999999',
       text: 'oi',
       env: {
-        ZAPI_MODE: 'omni',
-        ZAPI_OMNI_SECRET_KEY: 'test-secret',
-        ZAPI_OMNI_CHANNEL_ID: 'channel-123'
+        ZAPI_MODE: 'classic',
+        ZAPI_INSTANCE_ID: 'instance-123',
+        ZAPI_TOKEN: 'test-token',
+        ZAPI_CLIENT_TOKEN: 'test-client-token'
       },
       fetchImpl: async () => ({
         ok: false,
