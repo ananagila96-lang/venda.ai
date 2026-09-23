@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
-import { createApp } from '../server/index.js';
+import { createApp, createP0InboundHandler } from '../server/index.js';
 import { normalizeZapiInbound, resolveTenantFromInstance } from '../server/integrations/zapi/webhook.js';
 
 const INSTANCE_ID = 'instance-test';
@@ -89,4 +89,46 @@ test('POST /webhooks/zapi accepts and routes normalized text event', async () =>
     server.close();
     await once(server, 'close');
   }
+});
+
+test('P0 inbound handler replies only to controlled roundtrip trigger', async () => {
+  const sent = [];
+  const handler = createP0InboundHandler({
+    env: env(),
+    sendText: async (payload) => sent.push(payload),
+    logger: { info() {} }
+  });
+
+  const result = await handler({
+    tenantId: TENANT_ID,
+    messageId: 'msg-test',
+    phone: '5561999999999',
+    text: '  TESTE VENDA AI  '
+  });
+
+  assert.equal(result.handled, true);
+  assert.equal(result.testReplySent, true);
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].to, '5561999999999');
+  assert.equal(sent[0].text, 'Venda.AI online ⚡');
+});
+
+test('P0 inbound handler leaves non-test messages pending persistence', async () => {
+  const sent = [];
+  const handler = createP0InboundHandler({
+    env: env(),
+    sendText: async (payload) => sent.push(payload),
+    logger: { info() {} }
+  });
+
+  const result = await handler({
+    tenantId: TENANT_ID,
+    messageId: 'msg-normal',
+    phone: '5561999999999',
+    text: 'Quero agendar'
+  });
+
+  assert.equal(result.handled, false);
+  assert.equal(result.pendingPersistence, true);
+  assert.equal(sent.length, 0);
 });

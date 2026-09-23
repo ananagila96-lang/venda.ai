@@ -1,8 +1,11 @@
 import http from 'node:http';
 import { URL } from 'node:url';
 import { createZapiWebhookHandler } from './integrations/zapi/webhook.js';
+import { sendZapiText } from './integrations/zapi/client.js';
 
 const MAX_BODY_BYTES = 1024 * 1024;
+const ZAPI_ROUNDTRIP_TRIGGER = 'teste venda ai';
+const ZAPI_ROUNDTRIP_REPLY = 'Venda.AI online ⚡';
 
 function sendJson(res, statusCode, payload) {
   const body = JSON.stringify(payload);
@@ -47,6 +50,29 @@ function isWebhookAuthorized(url, req, env) {
   return typeof provided === 'string' && provided === expected;
 }
 
+export function createP0InboundHandler({ env = process.env, sendText = sendZapiText, logger = console } = {}) {
+  return async function handleInbound(event = {}) {
+    const normalizedText = typeof event.text === 'string' ? event.text.trim().toLowerCase() : '';
+
+    if (normalizedText !== ZAPI_ROUNDTRIP_TRIGGER) {
+      return { handled: false, pendingPersistence: true };
+    }
+
+    await sendText({
+      to: event.phone,
+      text: ZAPI_ROUNDTRIP_REPLY,
+      env
+    });
+
+    logger.info?.('Venda.AI Z-API roundtrip test reply sent', {
+      tenantId: event.tenantId || null,
+      messageId: event.messageId || null
+    });
+
+    return { handled: true, testReplySent: true };
+  };
+}
+
 export function createApp({ env = process.env, onMessage } = {}) {
   const handleZapiWebhook = createZapiWebhookHandler({ env, onMessage });
 
@@ -82,7 +108,8 @@ export function createApp({ env = process.env, onMessage } = {}) {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const port = Number(process.env.PORT || 3000);
-  const server = createApp();
+  const onMessage = createP0InboundHandler();
+  const server = createApp({ onMessage });
   server.listen(port, '0.0.0.0', () => {
     console.log(`Venda.AI backend listening on port ${port}`);
   });

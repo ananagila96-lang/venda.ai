@@ -98,7 +98,8 @@ export function createZapiWebhookHandler({ onMessage, env = process.env } = {}) 
       return { accepted: true, pendingPersistence: true, event: normalized };
     }
 
-    await onMessage(normalized);
-    return { accepted: true, event: normalized };
+    const messageResult = await onMessage(normalized);
+    const metadata = messageResult && typeof messageResult === 'object' ? messageResult : {};
+    return { accepted: true, ...metadata, event: normalized };
   };
 }
