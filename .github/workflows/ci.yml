@@ -14,6 +14,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      - name: Run Z-API adapter tests
+        run: node --test tests/zapi-adapter.test.mjs
       - run: npm audit --audit-level=high
       - name: Install browser QA
         run: |
