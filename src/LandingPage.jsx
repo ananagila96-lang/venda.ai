@@ -46,11 +46,105 @@ const faq = {
   secretaria: 'A Secretária Virtual ajuda a organizar conversas e agenda, incluindo confirmações, cancelamentos, reagendamentos e lista de espera.',
   integracao: 'Você conecta o WhatsApp da sua empresa ao Venda.AI. Depois disso, as conversas podem ser organizadas junto com clientes, oportunidades e histórico de atendimento.',
   receita: 'O Venda.AI diferencia uma oportunidade de uma venda realmente confirmada. Assim, você acompanha resultados com mais clareza e evita contar como receita algo que ainda não aconteceu.',
-  contratar: 'Clique em “Contratar agora” para iniciar seu cadastro. A área do cliente é reservada para empresas que já possuem acesso.'
+  contratar: 'Clique em “Contratar agora” para abrir o cadastro. Pagamento e ativação serão etapas separadas e não estão ativos neste cadastro.'
 };
 
-function HireNow({ dark = false }) {
-  return <a className={dark ? 'lp-hire lp-hire-dark' : 'lp-hire'} href="#contratar">Contratar agora <ArrowRight size={17}/></a>;
+const emptySignup = {
+  name: '',
+  company: '',
+  document: '',
+  phone: '',
+  email: '',
+  city: '',
+  state: '',
+  businessType: '',
+  contactConsent: false
+};
+
+function HireNow({ dark = false, onHire }) {
+  return <button type="button" className={dark ? 'lp-hire lp-hire-dark' : 'lp-hire'} onClick={onHire}>Contratar agora <ArrowRight size={17}/></button>;
+}
+
+function SignupModal({ onClose }) {
+  const [form, setForm] = useState(emptySignup);
+  const [submitted, setSubmitted] = useState(false);
+  const set = (key, value) => setForm(current => ({ ...current, [key]: value }));
+
+  const submit = (event) => {
+    event.preventDefault();
+    const record = { ...form, status: 'PENDENTE', createdAt: new Date().toISOString() };
+    localStorage.setItem('venda.ai:pending_signup', JSON.stringify(record));
+    setSubmitted(true);
+  };
+
+  return <div className="lp-modal-backdrop" role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget)onClose()}}>
+    <section className="lp-signup" role="dialog" aria-modal="true" aria-labelledby="cadastro-venda-ai">
+      <button className="lp-signup-close" type="button" onClick={onClose} aria-label="Fechar cadastro">×</button>
+      {submitted ? <div className="lp-signup-success">
+        <CheckCircle2/>
+        <span>CADASTRO RECEBIDO</span>
+        <h2>Pronto. Seus dados ficaram registrados como cadastro pendente.</h2>
+        <p>Nenhum pagamento foi iniciado e a Área do Cliente não foi liberada. Essas etapas serão conectadas depois.</p>
+        <button className="lp-hire" type="button" onClick={onClose}>Voltar ao site</button>
+      </div> : <>
+        <div className="lp-signup-head">
+          <span>CADASTRO VENDA.AI</span>
+          <h2 id="cadastro-venda-ai">Conte quem vai usar o Venda.AI.</h2>
+          <p>Preencha os dados básicos da sua empresa. Pagamento não faz parte desta etapa.</p>
+        </div>
+        <form className="lp-signup-form" onSubmit={submit}>
+          <label className="lp-field lp-field-wide">
+            <span>Nome do responsável</span>
+            <input required autoFocus value={form.name} onChange={e=>set('name',e.target.value)} placeholder="Seu nome completo"/>
+          </label>
+          <label className="lp-field lp-field-wide">
+            <span>Empresa / estabelecimento</span>
+            <input required value={form.company} onChange={e=>set('company',e.target.value)} placeholder="Nome da empresa"/>
+          </label>
+          <label className="lp-field">
+            <span>CPF ou CNPJ</span>
+            <input required value={form.document} onChange={e=>set('document',e.target.value)} placeholder="Somente números ou formatado" inputMode="numeric"/>
+          </label>
+          <label className="lp-field">
+            <span>WhatsApp</span>
+            <input required value={form.phone} onChange={e=>set('phone',e.target.value)} placeholder="(00) 00000-0000" inputMode="tel"/>
+          </label>
+          <label className="lp-field lp-field-wide">
+            <span>E-mail</span>
+            <input required type="email" value={form.email} onChange={e=>set('email',e.target.value)} placeholder="voce@empresa.com"/>
+          </label>
+          <label className="lp-field">
+            <span>Cidade</span>
+            <input required value={form.city} onChange={e=>set('city',e.target.value)} placeholder="Sua cidade"/>
+          </label>
+          <label className="lp-field">
+            <span>UF</span>
+            <input required maxLength={2} value={form.state} onChange={e=>set('state',e.target.value.toUpperCase())} placeholder="DF"/>
+          </label>
+          <label className="lp-field lp-field-wide">
+            <span>Tipo de negócio</span>
+            <select required value={form.businessType} onChange={e=>set('businessType',e.target.value)}>
+              <option value="">Selecione</option>
+              <option>Clínica / consultório</option>
+              <option>Beleza / estética</option>
+              <option>Loja / comércio</option>
+              <option>Serviços</option>
+              <option>Outro</option>
+            </select>
+          </label>
+          <label className="lp-consent lp-field-wide">
+            <input required type="checkbox" checked={form.contactConsent} onChange={e=>set('contactConsent',e.target.checked)}/>
+            <span>Autorizo o contato da equipe Venda.AI sobre este cadastro.</span>
+          </label>
+          <div className="lp-signup-actions lp-field-wide">
+            <button type="button" className="lp-secondary" onClick={onClose}>Cancelar</button>
+            <button type="submit" className="lp-hire">Finalizar cadastro <ArrowRight size={17}/></button>
+          </div>
+          <small className="lp-signup-note lp-field-wide">Nesta etapa o cadastro fica pendente. Não há cobrança nem ativação automática.</small>
+        </form>
+      </>}
+    </section>
+  </div>;
 }
 
 function SalesAgent() {
@@ -90,6 +184,9 @@ function SalesAgent() {
 }
 
 export default function LandingPage({ onClientArea }) {
+  const [showSignup, setShowSignup] = useState(false);
+  const openSignup = () => setShowSignup(true);
+
   return (
     <div className="lp">
       <header className="lp-nav">
@@ -104,7 +201,7 @@ export default function LandingPage({ onClientArea }) {
           <a href="#resultado">Resultados</a>
         </nav>
         <div className="lp-nav-actions">
-          <a className="lp-nav-hire" href="#contratar">Contratar agora</a>
+          <button className="lp-nav-hire" type="button" onClick={openSignup}>Contratar agora</button>
           <button className="lp-client" onClick={onClientArea}>Área do Cliente <ArrowRight size={17}/></button>
         </div>
       </header>
@@ -118,7 +215,7 @@ export default function LandingPage({ onClientArea }) {
               O Venda.AI ajuda sua empresa a organizar atendimentos, acompanhar clientes, recuperar oportunidades e entender quais contatos realmente viraram vendas.
             </p>
             <div className="lp-actions">
-              <HireNow/>
+              <HireNow onHire={openSignup}/>
               <a className="lp-secondary" href="#recuperacao">Entender como funciona</a>
               <button className="lp-secondary" onClick={onClientArea}>Já sou cliente</button>
             </div>
@@ -139,7 +236,7 @@ export default function LandingPage({ onClientArea }) {
             <div className="lp-metric"><span>Resultado</span><strong className="verified">CONFIRMAR</strong></div>
             <small>Uma oportunidade só é contada como venda quando o resultado realmente é confirmado.</small>
           </div>
-          <div className="lp-section-cta"><HireNow/></div>
+          <div className="lp-section-cta"><HireNow onHire={openSignup}/></div>
         </section>
 
         <section className="lp-section" id="recuperacao">
@@ -155,7 +252,7 @@ export default function LandingPage({ onClientArea }) {
             <RefreshCw/>
             <div><b>Encontre → acompanhe → confirme o resultado</b><p>Em vez de depender da memória ou procurar conversas antigas uma por uma, sua equipe ganha uma visão mais organizada das oportunidades.</p></div>
           </div>
-          <div className="lp-section-cta"><HireNow/></div>
+          <div className="lp-section-cta"><HireNow onHire={openSignup}/></div>
         </section>
 
         <section className="lp-dark lp-secretary" id="secretaria">
@@ -170,7 +267,7 @@ export default function LandingPage({ onClientArea }) {
             <article><UsersRound/><b>Lista de espera</b><p>Quando uma vaga aparece, clientes interessados podem ser identificados para tentar ocupar aquele horário.</p></article>
             <article><Target/><b>Atendimento com objetivo</b><p>Além de responder, sua equipe consegue acompanhar o que ainda precisa acontecer com cada oportunidade.</p></article>
           </div>
-          <div className="lp-section-cta"><HireNow dark/></div>
+          <div className="lp-section-cta"><HireNow dark onHire={openSignup}/></div>
         </section>
 
         <section className="lp-section lp-integration" id="integracao">
@@ -183,7 +280,7 @@ export default function LandingPage({ onClientArea }) {
             {integrationSteps.map(([n,title,text]) => <article key={n}><span>{n}</span><Link2/><h3>{title}</h3><p>{text}</p></article>)}
           </div>
           <div className="lp-status-note"><ShieldCheck/><div><b>Você continua no controle</b><p>O Venda.AI trabalha para ajudar sua equipe a organizar o atendimento e acompanhar oportunidades. Cada empresa acessa somente as informações da própria operação.</p></div></div>
-          <div className="lp-section-cta"><HireNow/></div>
+          <div className="lp-section-cta"><HireNow onHire={openSignup}/></div>
         </section>
 
         <section className="lp-dark" id="como-funciona">
@@ -195,7 +292,7 @@ export default function LandingPage({ onClientArea }) {
             {flow.map(([n,title,text]) => <article key={n}><b>{n}</b><div><h3>{title}</h3><p>{text}</p></div></article>)}
           </div>
           <div className="lp-rule"><ShieldCheck/><div><b>Resultado de verdade</b><p>Demonstrar interesse não é a mesma coisa que comprar. O Venda.AI ajuda a separar oportunidades de vendas realmente confirmadas.</p></div></div>
-          <div className="lp-section-cta"><HireNow dark/></div>
+          <div className="lp-section-cta"><HireNow dark onHire={openSignup}/></div>
         </section>
 
         <section className="lp-section lp-agenda" id="agenda">
@@ -209,7 +306,7 @@ export default function LandingPage({ onClientArea }) {
               <li><CheckCircle2/> Lista de espera para aproveitar vagas liberadas</li>
               <li><CheckCircle2/> Acompanhamento do resultado gerado</li>
             </ul>
-            <div className="lp-inline-cta"><HireNow/></div>
+            <div className="lp-inline-cta"><HireNow onHire={openSignup}/></div>
           </div>
           <div className="lp-agenda-card">
             <CalendarCheck2/>
@@ -230,7 +327,7 @@ export default function LandingPage({ onClientArea }) {
             <article><BarChart3/><b>Acompanhamento das vendas</b><p>Organize clientes e oportunidades por etapa para saber o que ainda precisa de atenção.</p></article>
             <article><CircleDollarSign/><b>Vendas confirmadas</b><p>Acompanhe o resultado somente quando a venda realmente for confirmada.</p></article>
           </div>
-          <div className="lp-section-cta"><HireNow/></div>
+          <div className="lp-section-cta"><HireNow onHire={openSignup}/></div>
         </section>
 
         <section className="lp-section lp-contract" id="contratar">
@@ -244,6 +341,7 @@ export default function LandingPage({ onClientArea }) {
               <span><CheckCircle2/> WhatsApp conectado ao atendimento</span>
               <span><CheckCircle2/> Acompanhamento de vendas e resultados</span>
             </div>
+            <div className="lp-section-cta"><HireNow onHire={openSignup}/></div>
           </div>
           <SalesAgent/>
         </section>
@@ -255,13 +353,15 @@ export default function LandingPage({ onClientArea }) {
         <div className="lp-brand"><strong>VENDA</strong><span>.AI</span></div>
         <p>Funcionário digital que ajuda sua empresa a encontrar oportunidades, recuperar vendas e acompanhar resultados.</p>
         <div className="lp-footer-actions">
-          <a href="#contratar">Contratar agora</a>
+          <button type="button" onClick={openSignup}>Contratar agora</button>
           <button onClick={onClientArea}>Área do Cliente</button>
         </div>
         <div className="lp-legal-pending" aria-label="Documentos legais em preparação">
           <span>Privacidade</span><span>Termos</span><span>Cookies</span><span>LGPD</span>
         </div>
       </footer>
+
+      {showSignup && <SignupModal onClose={()=>setShowSignup(false)}/>} 
     </div>
   );
 }
