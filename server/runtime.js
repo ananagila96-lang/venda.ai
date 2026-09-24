@@ -37,7 +37,7 @@ export async function createProductionInboundRuntime({
       logger
     });
 
-    return { onMessage, close: database.close, aiEnabled: true };
+    return { onMessage, close: database.close, database, aiEnabled: true };
   }
 
   logger.warn?.('Venda.AI started with persistence enabled and AI disabled', {
@@ -61,5 +61,5 @@ export async function createProductionInboundRuntime({
     };
   };
 
-  return { onMessage, close: database.close, aiEnabled: false };
+  return { onMessage, close: database.close, database, aiEnabled: false };
 }
