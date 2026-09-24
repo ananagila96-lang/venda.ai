@@ -27,9 +27,11 @@ export async function createPostgresDatabase({
   }
 
   async function migrate() {
-    const migrationUrl = new URL('./migrations/001_conversations.sql', import.meta.url);
-    const migration = await readFile(migrationUrl, 'utf8');
-    await sql.unsafe(migration).simple();
+    for (const file of ['001_conversations.sql', '002_auth.sql']) {
+      const migrationUrl = new URL(`./migrations/${file}`, import.meta.url);
+      const migration = await readFile(migrationUrl, 'utf8');
+      await sql.unsafe(migration).simple();
+    }
   }
 
   async function close() {
