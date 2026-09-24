@@ -14,8 +14,8 @@ CREATE TABLE IF NOT EXISTS tenants (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_tenants_document
-  ON tenants (regexp_replace(document, '\\D', '', 'g'))
-  WHERE document IS NOT NULL AND regexp_replace(document, '\\D', '', 'g') <> '';
+  ON tenants (document)
+  WHERE document IS NOT NULL AND document <> '';
 
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
