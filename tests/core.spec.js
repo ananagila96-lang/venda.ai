@@ -2,9 +2,9 @@ import { test, expect } from '@playwright/test';
 
 test('public landing sells recovery and opens client area', async ({ page }) => {
   await page.goto('http://127.0.0.1:5173/');
-  await expect(page.locator('.lp-hero h1')).toContainText('Venda que esfria');
-  await expect(page.getByText('SECRETÁRIA VIRTUAL').first()).toBeVisible();
-  await expect(page.getByText('COMO FUNCIONA A INTEGRAÇÃO')).toBeVisible();
+  await expect(page.locator('.lp-hero h1')).toContainText('Não deixe clientes interessados');
+  await expect(page.getByText('ATENDIMENTO E AGENDA').first()).toBeVisible();
+  await expect(page.getByText('SEU WHATSAPP + VENDA.AI').first()).toBeVisible();
 
   const hireButtons = page.getByRole('link', { name: /Contratar agora/i });
   await expect(hireButtons.first()).toBeVisible();
