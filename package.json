@@ -9,11 +9,12 @@
     "preview": "vite preview",
     "start": "node server/index.js",
     "test:zapi": "node --test tests/zapi-adapter.test.mjs tests/zapi-webhook.test.mjs",
-    "test:p0": "node --test tests/ai-adapter.test.mjs tests/inbound-pipeline.test.mjs tests/postgres-store.test.mjs",
+    "test:p0": "node --test tests/ai-adapter.test.mjs tests/inbound-pipeline.test.mjs tests/postgres-store.test.mjs tests/runtime.test.mjs",
     "check": "npm run build && npm run test:zapi && npm run test:p0"
   },
   "dependencies": {
     "lucide-react": "0.468.0",
+    "postgres": "3.4.9",
     "react": "18.3.1",
     "react-dom": "18.3.1"
   },
