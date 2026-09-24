@@ -2,6 +2,7 @@ import http from 'node:http';
 import { URL } from 'node:url';
 import { createZapiWebhookHandler } from './integrations/zapi/webhook.js';
 import { sendZapiText } from './integrations/zapi/client.js';
+import { createProductionInboundRuntime } from './runtime.js';
 
 const MAX_BODY_BYTES = 1024 * 1024;
 const ZAPI_ROUNDTRIP_TRIGGER = 'teste venda ai';
@@ -137,6 +138,14 @@ export function createP0InboundHandler({ env = process.env, sendText = sendZapiT
   };
 }
 
+export function composeInboundHandlers(primary, fallback) {
+  return async function handleComposedInbound(event = {}) {
+    const primaryResult = await primary(event);
+    if (primaryResult?.handled) return primaryResult;
+    return fallback(event);
+  };
+}
+
 export function createApp({ env = process.env, onMessage } = {}) {
   const handleZapiWebhook = createZapiWebhookHandler({ env, onMessage });
 
@@ -170,11 +179,43 @@ export function createApp({ env = process.env, onMessage } = {}) {
   });
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
-  const port = Number(process.env.PORT || 3000);
-  const onMessage = createP0InboundHandler();
-  const server = createApp({ onMessage });
+export async function startServer({ env = process.env, logger = console } = {}) {
+  const port = Number(env.PORT || 3000);
+  const testHandler = createP0InboundHandler({ env, logger });
+  let runtime = null;
+  let onMessage = testHandler;
+
+  if (env.DATABASE_URL) {
+    runtime = await createProductionInboundRuntime({ env, logger });
+    onMessage = composeInboundHandlers(testHandler, runtime.onMessage);
+  } else {
+    logger.warn?.('Venda.AI started without server-side persistence', {
+      reason: 'DATABASE_URL_MISSING'
+    });
+  }
+
+  const server = createApp({ env, onMessage });
   server.listen(port, '0.0.0.0', () => {
-    console.log(`Venda.AI backend listening on port ${port}`);
+    logger.log?.(`Venda.AI backend listening on port ${port}`);
+  });
+
+  const shutdown = async () => {
+    server.close();
+    await runtime?.close?.();
+  };
+
+  process.once('SIGTERM', shutdown);
+  process.once('SIGINT', shutdown);
+
+  return { server, runtime };
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  startServer().catch((error) => {
+    console.error('Venda.AI backend failed to start', {
+      code: error.code || null,
+      message: error.message
+    });
+    process.exitCode = 1;
   });
 }
