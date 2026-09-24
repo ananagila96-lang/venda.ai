@@ -113,7 +113,7 @@ test('P0 inbound handler replies only to controlled roundtrip trigger', async ()
   assert.equal(sent[0].text, 'Venda.AI online ⚡');
 });
 
-test('P0 inbound handler leaves non-test messages pending persistence', async () => {
+test('P0 inbound handler leaves non-test messages pending persistence by default', async () => {
   const sent = [];
   const handler = createP0InboundHandler({
     env: env(),
@@ -131,4 +131,39 @@ test('P0 inbound handler leaves non-test messages pending persistence', async ()
   assert.equal(result.handled, false);
   assert.equal(result.pendingPersistence, true);
   assert.equal(sent.length, 0);
+});
+
+test('P0 Ana Nutri mode replies to normal messages only for configured tenant', async () => {
+  const sent = [];
+  const handler = createP0InboundHandler({
+    env: env({
+      P0_TEST_PERSONA: 'ana-nutri',
+      P0_TEST_TENANT_ID: TENANT_ID
+    }),
+    sendText: async (payload) => sent.push(payload),
+    logger: { info() {} }
+  });
+
+  const result = await handler({
+    tenantId: TENANT_ID,
+    messageId: 'msg-ana-1',
+    phone: '5561999999999',
+    text: 'Oi, quero emagrecer'
+  });
+
+  assert.equal(result.handled, true);
+  assert.equal(result.testPersona, 'ana-nutri');
+  assert.equal(sent.length, 1);
+  assert.match(sent[0].text, /Ana/);
+
+  const ignored = await handler({
+    tenantId: 'tenant-other',
+    messageId: 'msg-ana-2',
+    phone: '5561888888888',
+    text: 'Oi'
+  });
+
+  assert.equal(ignored.handled, false);
+  assert.equal(ignored.pendingPersistence, true);
+  assert.equal(sent.length, 1);
 });

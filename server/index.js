@@ -6,6 +6,7 @@ import { sendZapiText } from './integrations/zapi/client.js';
 const MAX_BODY_BYTES = 1024 * 1024;
 const ZAPI_ROUNDTRIP_TRIGGER = 'teste venda ai';
 const ZAPI_ROUNDTRIP_REPLY = 'Venda.AI online ⚡';
+const ANA_NUTRI_PERSONA = 'ana-nutri';
 
 function sendJson(res, statusCode, payload) {
   const body = JSON.stringify(payload);
@@ -50,26 +51,89 @@ function isWebhookAuthorized(url, req, env) {
   return typeof provided === 'string' && provided === expected;
 }
 
+function normalizeForMatch(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+}
+
+function isAnaNutriEnabled(event, env) {
+  const persona = normalizeForMatch(env.P0_TEST_PERSONA);
+  if (persona !== ANA_NUTRI_PERSONA) return false;
+
+  const tenant = String(env.P0_TEST_TENANT_ID || '').trim();
+  return !tenant || tenant === event.tenantId;
+}
+
+export function buildAnaNutriTestReply(text) {
+  const message = normalizeForMatch(text);
+
+  if (/\b(oi|ola|bom dia|boa tarde|boa noite)\b/.test(message)) {
+    return 'Oi! 😊 Eu sou a Ana, assistente da nutricionista. Me conta: o que você está buscando hoje — emagrecimento, ganho de massa, melhora da alimentação ou quer agendar uma consulta?';
+  }
+
+  if (/(agendar|agenda|consulta|horario|marcar)/.test(message)) {
+    return 'Claro 💚 Vamos organizar sua consulta. Qual dia e período você prefere: manhã, tarde ou noite?';
+  }
+
+  if (/(valor|preco|preço|quanto custa|custa)/.test(message)) {
+    return 'Te ajudo com isso 😊 É sua primeira consulta ou você já é paciente? Assim eu te passo o atendimento correto sem misturar as informações.';
+  }
+
+  if (/(emagrecer|emagrecimento|perder peso|ganhar massa|massa muscular|alimentacao|alimentação|dieta)/.test(message)) {
+    return 'Entendi 💚 O acompanhamento é individualizado conforme seu objetivo e rotina. Quer que eu já te ajude a agendar uma avaliação com a nutricionista?';
+  }
+
+  if (/(cancelar|cancelamento)/.test(message)) {
+    return 'Sem problema. Me diga seu nome e o horário da consulta que você quer cancelar para eu seguir com o atendimento.';
+  }
+
+  if (/(reagendar|remarcar|mudar horario|mudar horário)/.test(message)) {
+    return 'Claro 😊 Me diga o horário atual da consulta e qual dia ou período seria melhor para você.';
+  }
+
+  return 'Entendi 😊 Me conta um pouquinho mais do que você precisa. Posso te ajudar com dúvidas de atendimento, objetivo nutricional ou agendamento.';
+}
+
 export function createP0InboundHandler({ env = process.env, sendText = sendZapiText, logger = console } = {}) {
   return async function handleInbound(event = {}) {
     const normalizedText = typeof event.text === 'string' ? event.text.trim().toLowerCase() : '';
 
-    if (normalizedText !== ZAPI_ROUNDTRIP_TRIGGER) {
-      return { handled: false, pendingPersistence: true };
+    if (normalizedText === ZAPI_ROUNDTRIP_TRIGGER) {
+      await sendText({
+        to: event.phone,
+        text: ZAPI_ROUNDTRIP_REPLY,
+        env
+      });
+
+      logger.info?.('Venda.AI Z-API roundtrip test reply sent', {
+        tenantId: event.tenantId || null,
+        messageId: event.messageId || null
+      });
+
+      return { handled: true, testReplySent: true };
     }
 
-    await sendText({
-      to: event.phone,
-      text: ZAPI_ROUNDTRIP_REPLY,
-      env
-    });
+    if (isAnaNutriEnabled(event, env)) {
+      const reply = buildAnaNutriTestReply(event.text);
 
-    logger.info?.('Venda.AI Z-API roundtrip test reply sent', {
-      tenantId: event.tenantId || null,
-      messageId: event.messageId || null
-    });
+      await sendText({
+        to: event.phone,
+        text: reply,
+        env
+      });
 
-    return { handled: true, testReplySent: true };
+      logger.info?.('Venda.AI Ana Nutri test reply sent', {
+        tenantId: event.tenantId || null,
+        messageId: event.messageId || null
+      });
+
+      return { handled: true, testPersona: ANA_NUTRI_PERSONA };
+    }
+
+    return { handled: false, pendingPersistence: true };
   };
 }
 
